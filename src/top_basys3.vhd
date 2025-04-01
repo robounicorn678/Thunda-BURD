@@ -55,6 +55,20 @@
 --|    sm_<state machine type>  = state machine type definition
 --|    s_<signal name>          = state name
 --|
+-----------------------
+--| One-Hot State Encoding key
+--| --------------------
+--| State | Encoding
+--| --------------------
+--| OFF   | 10000000
+--| ON    | 01000000
+--| R1    | 00100000
+--| R2    | 00010000
+--| R3    | 00001000
+--| L1    | 00000100
+--| L2    | 00000010
+--| L3    | 00000001
+--| --------------------
 --+----------------------------------------------------------------------------
 library ieee;
   use ieee.std_logic_1164.all;
@@ -87,9 +101,47 @@ architecture top_basys3_arch of top_basys3 is
   
 	-- declare components
 
+component thunderbird_fsm is
+    port (
+        i_clk, i_reset  : in    std_logic;
+        i_left, i_right : in    std_logic;
+        o_lights_L      : out   std_logic_vector(2 downto 0);
+        o_lights_R      : out   std_logic_vector(2 downto 0)
+    );
+end component thunderbird_fsm;
+
+component clock_divider is
+	generic ( constant k_DIV : natural := 2	);
+	port ( 	i_clk    : in std_logic;		   -- basys3 clk
+			i_reset  : in std_logic;		   -- asynchronous
+			o_clk    : out std_logic		   -- divided (slow) clock
+	);
+end component clock_divider;
+
+	signal w_clk : std_logic;		--this wire provides the connection between o_clk and stoplight clk
+
   
 begin
 	-- PORT MAPS ----------------------------------------
+stopfsm_inst : thunderbird_fsm
+        port map(
+            i_left => sw(15),
+            i_right => sw(0),
+            i_reset => btnR,
+            i_clk => w_clk,
+            o_lights_L => led(15 downto 13),
+            o_lights_R(0) => led(2),
+            o_lights_R(1) => led(1),
+            o_lights_R(2) => led(0)
+        );
+		clkdiv_inst : clock_divider 		--instantiation of clock_divider to take 
+        generic map ( k_DIV => 25000000 ) -- 1 Hz clock from 100 MHz
+        port map (						  
+            i_clk   => clk,
+            i_reset => btnL,
+            o_clk   => w_clk
+            
+        );   
 
 	
 	
